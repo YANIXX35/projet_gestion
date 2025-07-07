@@ -1,6 +1,14 @@
 <?php
 include 'config.php';
+session_start();
+
 $message = '';
+$utilisateur_id = $_SESSION['utilisateur_id'] ?? null;
+
+if (!$utilisateur_id) {
+    echo "<div style='color:red;'>❌ Erreur : utilisateur non connecté.</div>";
+    exit;
+}
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $titre = $_POST["titre"] ?? '';
@@ -46,15 +54,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $categorie_id = $categorie['id'];
             }
 
-            // Insertion du document
+            // Insertion du document avec utilisateur_id
             $stmt = $pdo->prepare("INSERT INTO documents (
                 titre, description, type_format, auteur_id, categorie_id,
-                confidentialite, statut, fichier, departement_id, date_creation
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                confidentialite, statut, fichier, departement_id, utilisateur_id, date_creation
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
 
             $stmt->execute([
                 $titre, $description, $type_format, $auteur_id, $categorie_id,
-                $confidentialite, $statut, $fichier_nom, $departement_id
+                $confidentialite, $statut, $fichier_nom, $departement_id, $utilisateur_id
             ]);
 
             $message = "<div style='color: green;'>✅ Document ajouté avec succès !</div>";

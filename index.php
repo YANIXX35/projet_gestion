@@ -1,95 +1,157 @@
 <?php
 session_start();
-$step = isset($_POST['step']) ? $_POST['step'] : 0;
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Gestion de Documents - Accueil</title>
+    <title>Accueil - Gestion de Documents</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #f2f2f2;
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f8f9fa;
+        }
+
+        .topbar {
+            background: #f1f1f1;
+            padding: 10px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .topbar .left, .topbar .right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .navbar {
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 50px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .navbar .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007BFF;
+        }
+
+        .navbar .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .navbar .nav-links a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .navbar .nav-buttons a {
+            text-decoration: none;
+            background-color: #dc3545;
+            color: white;
+            padding: 10px 20px;
+            margin-left: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .navbar .nav-buttons a:hover {
+            background-color: #bd2130;
+        }
+
+        .hero {
+            background: url('images/bg-docs.jpg') center/cover no-repeat;
+            height: 80vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-        }
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            width: 400px;
-        }
-        h2 {
-            text-align: center;
-        }
-        .btn, button {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            border: none;
-            background: #007BFF;
             color: white;
-            border-radius: 8px;
-            cursor: pointer;
+            text-align: center;
+            padding: 20px;
+            position: relative;
         }
-        .btn:hover {
-            background: #0056b3;
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
         }
-        input[type="text"], input[type="email"], input[type="password"], select {
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .hero p {
+            font-size: 18px;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 32px;
+            }
+            .navbar, .topbar {
+                flex-direction: column;
+                gap: 10px;
+            }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <?php if ($step == 0): ?>
-        <h2>Bienvenue</h2>
-        <form method="POST">
-            <input type="hidden" name="step" value="1">
-            <button class="btn" name="action" value="login">Se connecter</button>
-            <button class="btn" name="action" value="register">Créer un compte</button>
-        </form>
 
-    <?php elseif ($step == 1 && $_POST['action'] == 'login'): ?>
-        <h2>Connexion</h2>
-        <form method="POST">
-            <input type="hidden" name="step" value="2">
-            <label for="role">Vous êtes :</label>
-            <select name="role" required>
-                <option value="">-- Choisir un rôle --</option>
-                <option value="admin">Admin</option>
-                <option value="utilisateur">Utilisateur</option>
-            </select>
-            <button class="btn">Suivant</button>
-        </form>
-
-    <?php elseif ($step == 2): ?>
-        <h2>Connexion <?php echo htmlspecialchars($_POST['role']); ?></h2>
-        <form action="login.php" method="POST">
-            <input type="hidden" name="role" value="<?php echo htmlspecialchars($_POST['role']); ?>">
-            <input type="text" name="identifiant" placeholder="Nom ou adresse email" required>
-            <input type="password" name="mot_de_passe" placeholder="Mot de passe" required>
-            <button class="btn">Connexion</button>
-        </form>
-
-    <?php elseif ($step == 1 && $_POST['action'] == 'register'): ?>
-        <h2>Créer un compte</h2>
-        <form action="register.php" method="POST">
-            <input type="text" name="nom" placeholder="Nom du département" required>
-            <input type="email" name="email" placeholder="Adresse Email" required>
-            <input type="password" name="mot_de_passe" placeholder="Mot de passe" required>
-            <button class="btn">Créer un compte</button>
-        </form>
-    <?php endif; ?>
+<!-- Bandeau haut -->
+<div class="topbar">
+    <div class="left">
+        📍 Abidjan, Côte d'Ivoire
+        🕒 Lun - Ven : 08h00 - 18h00
+    </div>
+    <div class="right">
+        📞 +225 01 23 45 67 89
+        ✉️ support@docsystem.com
+    </div>
 </div>
+
+<!-- Barre de navigation -->
+<div class="navbar">
+    <div class="logo">DocGestion</div>
+    <div class="nav-links">
+        <a href="#">Accueil</a>
+        <a href="#">Fonctionnalités</a>
+        <a href="#">À propos</a>
+        <a href="#">Contact</a>
+    </div>
+    <div class="nav-buttons">
+        <a href="login.php">🔐 Connexion</a>
+        <a href="register.php">📝 S’inscrire</a>
+    </div>
+</div>
+
+<!-- Section principale -->
+<div class="hero">
+    <div class="hero-content">
+        <h1>Plateforme de Gestion de Documents</h1>
+        <p>Centralisez, organisez et accédez à vos documents facilement et en toute sécurité.</p>
+    </div>
+</div>
+
 </body>
 </html>
