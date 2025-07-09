@@ -1,16 +1,19 @@
 <?php
+// fonctionalites.php
 session_start();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Accueil - Gestion de Documents</title>
+    <title>Fonctionnalités - DocGestion</title>
     <style>
         body {
-            margin: 0;
             font-family: 'Segoe UI', sans-serif;
-            background: #f8f9fa;
+            background-color: #f8f9fa;
+            color: #333;
+            margin: 0;
+            padding: 0;
         }
 
         .topbar {
@@ -42,7 +45,6 @@ session_start();
             font-size: 24px;
             font-weight: bold;
             color: #007BFF;
-            animation: fadeIn 1s ease-in-out;
         }
 
         .navbar .nav-links {
@@ -76,77 +78,67 @@ session_start();
             background-color: #bd2130;
         }
 
-        .hero {
-            background: url('images/bg-docs.jpg') center/cover no-repeat;
-            height: 80vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            position: relative;
-            color: white;
-        }
-
-        .hero::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 2;
-            animation: fadeIn 1.5s ease;
-        }
-
-        .hero h1 {
-            font-size: 48px;
-            background: linear-gradient(to right, #00c6ff, #0072ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 20px;
-        }
-
-        .hero p {
-            font-size: 20px;
-            margin-bottom: 30px;
-        }
-
-        .hero a.button {
+        header {
             background-color: #007BFF;
             color: white;
-            padding: 12px 25px;
+            padding: 60px 20px;
+            text-align: center;
+            animation: fadeIn 1s ease;
+        }
+
+        main {
+            padding: 40px 20px;
+        }
+
+        section {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 900px;
+            margin: auto;
+            animation: fadeIn 1.2s ease-in-out;
+        }
+
+        h2 {
+            color: #007BFF;
+            margin-top: 30px;
+        }
+
+        p {
+            line-height: 1.6;
+        }
+
+        .back-home {
+            display: block;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .back-home a {
+            background: #007BFF;
+            color: white;
+            padding: 12px 24px;
             border-radius: 8px;
             text-decoration: none;
             font-weight: bold;
             transition: background 0.3s;
         }
 
-        .hero a.button:hover {
+        .back-home a:hover {
             background-color: #0056b3;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {opacity: 0; transform: translateY(20px);}
+            to {opacity: 1; transform: translateY(0);}
         }
 
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 32px;
-            }
-
             .navbar, .topbar {
                 flex-direction: column;
                 gap: 10px;
                 padding: 10px 20px;
-            }
-
-            .hero a.button {
-                padding: 10px 20px;
-                font-size: 16px;
             }
         }
     </style>
@@ -178,14 +170,33 @@ session_start();
     </div>
 </div>
 
-<!-- Section principale -->
-<div class="hero">
-    <div class="hero-content">
-        <h1>Plateforme de Gestion de Documents</h1>
-        <p>Centralisez, organisez et accédez à vos documents facilement et en toute sécurité.</p>
-        <a class="button" href="register.php">Commencer maintenant</a>
-    </div>
-</div>
+<!-- Contenu principal -->
+<header>
+    <h1>Nos Fonctionnalités Clés</h1>
+</header>
+
+<main>
+    <section>
+        <h2>📁 Centralisation des documents</h2>
+        <p>Accédez à tous vos documents depuis un seul tableau de bord intuitif et sécurisé.</p>
+
+        <h2>📂 Organisation intuitive</h2>
+        <p>Classez vos fichiers par catégories, par projet ou par date pour une navigation rapide.</p>
+
+        <h2>🔍 Recherche intelligente</h2>
+        <p>Grâce à notre moteur de recherche intégré, trouvez en quelques secondes ce dont vous avez besoin.</p>
+
+        <h2>🔐 Partage sécurisé</h2>
+        <p>Partagez vos fichiers en toute sécurité avec des permissions personnalisées pour chaque utilisateur.</p>
+
+        <h2>📊 Suivi des accès</h2>
+        <p>Gardez un œil sur qui consulte vos documents et à quel moment grâce à notre historique d’activité.</p>
+
+        <div class="back-home">
+            <a href="index.php">⬅ Retour à l'accueil</a>
+        </div>
+    </section>
+</main>
 
 </body>
 </html>

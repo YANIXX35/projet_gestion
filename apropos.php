@@ -1,16 +1,18 @@
 <?php
+// apropos.php
 session_start();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Accueil - Gestion de Documents</title>
+    <title>À propos - DocGestion</title>
     <style>
         body {
-            margin: 0;
             font-family: 'Segoe UI', sans-serif;
-            background: #f8f9fa;
+            background-color: #f8f9fa;
+            color: #333;
+            margin: 0;
         }
 
         .topbar {
@@ -42,7 +44,6 @@ session_start();
             font-size: 24px;
             font-weight: bold;
             color: #007BFF;
-            animation: fadeIn 1s ease-in-out;
         }
 
         .navbar .nav-links {
@@ -76,84 +77,74 @@ session_start();
             background-color: #bd2130;
         }
 
-        .hero {
-            background: url('images/bg-docs.jpg') center/cover no-repeat;
-            height: 80vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            position: relative;
-            color: white;
-        }
-
-        .hero::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 2;
-            animation: fadeIn 1.5s ease;
-        }
-
-        .hero h1 {
-            font-size: 48px;
-            background: linear-gradient(to right, #00c6ff, #0072ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 20px;
-        }
-
-        .hero p {
-            font-size: 20px;
-            margin-bottom: 30px;
-        }
-
-        .hero a.button {
+        header {
             background-color: #007BFF;
             color: white;
-            padding: 12px 25px;
+            padding: 60px 20px;
+            text-align: center;
+            animation: fadeIn 1s ease;
+        }
+
+        main {
+            padding: 40px 20px;
+        }
+
+        section {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 900px;
+            margin: auto;
+            animation: fadeIn 1.2s ease-in-out;
+        }
+
+        h2 {
+            color: #007BFF;
+            margin-top: 30px;
+        }
+
+        p {
+            line-height: 1.6;
+        }
+
+        .back-home {
+            display: block;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .back-home a {
+            background: #007BFF;
+            color: white;
+            padding: 12px 24px;
             border-radius: 8px;
             text-decoration: none;
             font-weight: bold;
             transition: background 0.3s;
         }
 
-        .hero a.button:hover {
+        .back-home a:hover {
             background-color: #0056b3;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {opacity: 0; transform: translateY(20px);}
+            to {opacity: 1; transform: translateY(0);}
         }
 
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 32px;
-            }
-
             .navbar, .topbar {
                 flex-direction: column;
                 gap: 10px;
                 padding: 10px 20px;
-            }
-
-            .hero a.button {
-                padding: 10px 20px;
-                font-size: 16px;
             }
         }
     </style>
 </head>
 <body>
 
-<!-- Bandeau haut -->
+<!-- Topbar -->
 <div class="topbar">
     <div class="left">
         📍 Abidjan, Côte d'Ivoire &nbsp;&nbsp; 🕒 Lun - Ven : 08h00 - 18h00
@@ -163,7 +154,7 @@ session_start();
     </div>
 </div>
 
-<!-- Barre de navigation -->
+<!-- Navbar -->
 <div class="navbar">
     <div class="logo">DocGestion</div>
     <div class="nav-links">
@@ -178,14 +169,39 @@ session_start();
     </div>
 </div>
 
-<!-- Section principale -->
-<div class="hero">
-    <div class="hero-content">
-        <h1>Plateforme de Gestion de Documents</h1>
-        <p>Centralisez, organisez et accédez à vos documents facilement et en toute sécurité.</p>
-        <a class="button" href="register.php">Commencer maintenant</a>
-    </div>
-</div>
+<!-- Contenu principal -->
+<header>
+    <h1>À propos de DocGestion</h1>
+</header>
+
+<main>
+    <section>
+        <h2>Notre Mission</h2>
+        <p>
+            Chez <strong>DocGestion</strong>, notre objectif est de simplifier la gestion documentaire
+            pour les entreprises, les équipes et les professionnels. Nous permettons une organisation fluide
+            et sécurisée de vos fichiers dans un environnement numérique moderne.
+        </p>
+
+        <h2>Pourquoi nous choisir ?</h2>
+        <p>
+            ✔️ Une interface intuitive et moderne<br>
+            ✔️ Une sécurité des données renforcée<br>
+            ✔️ Un accès multi-appareil 24/7<br>
+            ✔️ Un support client réactif et dédié
+        </p>
+
+        <h2>Notre Équipe</h2>
+        <p>
+            Fondée par des passionnés de technologie et de productivité, notre équipe regroupe des développeurs,
+            designers et experts en sécurité qui travaillent chaque jour à améliorer votre expérience de gestion documentaire.
+        </p>
+
+        <div class="back-home">
+            <a href="index.php">⬅ Retour à l'accueil</a>
+        </div>
+    </section>
+</main>
 
 </body>
 </html>
