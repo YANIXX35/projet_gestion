@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nom      = trim($_POST['nom']   ?? '');
     $email    = trim($_POST['email'] ?? '');
     $pass_raw = $_POST['mot_de_passe'] ?? '';
-    $role     = $_POST['role'] ?? 'utilisateur';
+    $role     = 'utilisateur'; // Rôle fixé à "utilisateur"
 
     // ── 2. Contrôle minimal des champs texte ──────────────────────────────────
     $erreurs = [];
@@ -100,12 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <label>Mot de passe :</label>
         <input type="password" name="mot_de_passe" required>
-
-        <label>Rôle :</label>
-        <select name="role" required>
-            <option value="utilisateur" <?= (@$_POST['role']=='utilisateur')?'selected':'' ?>>Utilisateur</option>
-            <option value="admin" <?= (@$_POST['role']=='admin')?'selected':'' ?>>Admin</option>
-        </select>
 
         <label>Avatar (facultatif) :</label>
         <input type="file" name="avatar" accept=".jpg,.jpeg,.png,.gif,.webp">
