@@ -2,6 +2,14 @@
 session_start();
 include 'config.php';
 
+// Inclure PHPMailer
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+require 'PHPMailer/PHPMailer.php';
+require 'PHPMailer/SMTP.php';
+require 'PHPMailer/Exception.php';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ── 1. Nettoyage / récupération des données ───────────────────────────────
@@ -57,6 +65,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':role'   => $role,
             ':avatar' => $avatar_path
         ]);
+
+        // Envoi de l’email de confirmation avec lien vers login.php
+        try {
+            $mail = new PHPMailer(true);
+            $mail->isSMTP();
+            $mail->Host       = 'smtp.gmail.com';
+            $mail->SMTPAuth   = true;
+            $mail->Username   = 'binksyao95@gmail.com';           // Ton email
+            $mail->Password   = 'phkhvhvljtdvroaj';               // Mot de passe d'application (sans espaces)
+            $mail->SMTPSecure = 'tls';
+            $mail->Port       = 587;
+
+            $mail->setFrom('binksyao95@gmail.com', 'Ton Site');
+            $mail->addAddress($email, $nom);
+
+            $mail->isHTML(true);
+            $mail->Subject = 'Bienvenue sur notre site !';
+            $mail->Body = "
+                <p>Bonjour <b>" . htmlspecialchars($nom) . "</b>,</p>
+                <p>Votre inscription a bien été prise en compte.</p>
+                <p>Vous pouvez maintenant vous connecter en cliquant sur ce lien :</p>
+                <p><a href='http://localhost/formation/login.php'>Se connecter</a></p>
+                <p>Merci de votre confiance !</p>
+            ";
+            $mail->AltBody = "Bonjour $nom,\n\nVotre inscription a bien été prise en compte.\nVous pouvez maintenant vous connecter ici : http://localhost/formation/login.php\n\nMerci de votre confiance !";
+
+            $mail->send();
+
+        } catch (Exception $e) {
+            error_log("Erreur envoi mail : " . $mail->ErrorInfo);
+        }
 
         $_SESSION['flash'] = "Compte créé, vous pouvez vous connecter.";
         header('Location: login.php');

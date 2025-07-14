@@ -38,6 +38,14 @@ $stmtDocs = $pdo->prepare("
 ");
 $stmtDocs->execute([$dossier_id, $utilisateur_id]);
 $documents = $stmtDocs->fetchAll(PDO::FETCH_ASSOC);
+
+// Débogage : Vérifier si les fichiers existent
+foreach ($documents as &$doc) {
+    if ($doc['fichier'] && !file_exists("uploads/" . $doc['fichier'])) {
+        $doc['fichier'] = null; // Marquer comme inexistant si le fichier n'est pas trouvé
+    }
+}
+unset($doc);
 ?>
 
 <!DOCTYPE html>
@@ -54,6 +62,8 @@ $documents = $stmtDocs->fetchAll(PDO::FETCH_ASSOC);
         }
         .doc-item h3 { margin: 0 0 8px; }
         .doc-item p { margin: 3px 0; }
+        .preview { margin-top: 10px; }
+        .preview iframe { width: 100%; height: 400px; border: none; }
         a.btn {
             display: inline-block; margin-top: 10px; padding: 8px 12px;
             background: #007BFF; color: white; text-decoration: none; border-radius: 6px;
@@ -82,7 +92,26 @@ $documents = $stmtDocs->fetchAll(PDO::FETCH_ASSOC);
                 <p><strong>Auteur :</strong> <?= htmlspecialchars($doc['auteur']) ?></p>
                 <p><strong>Catégorie :</strong> <?= htmlspecialchars($doc['categorie']) ?></p>
                 <p><strong>Département :</strong> <?= htmlspecialchars($doc['departement']) ?></p>
-                <a href="details_document.php?id=<?= $doc['id'] ?>" class="btn" target="_blank">Voir détails / Télécharger</a>
+
+                <div class="preview">
+                    <?php if ($doc['fichier'] && file_exists("uploads/" . $doc['fichier'])): ?>
+                        <?php
+                        $file_extension = strtolower(pathinfo($doc['fichier'], PATHINFO_EXTENSION));
+                        if (in_array($file_extension, ['doc', 'docx'])) {
+                            echo '<iframe src="https://docs.google.com/gview?url=' . urlencode('http://' . $_SERVER['HTTP_HOST'] . '/uploads/' . $doc['fichier']) . '&embedded=true"></iframe>';
+                            echo '<br><a href="uploads/' . htmlspecialchars($doc['fichier']) . '" class="btn" download>📥 Télécharger le fichier</a>';
+                        } elseif (in_array($file_extension, ['pdf'])) {
+                            echo '<iframe src="uploads/' . htmlspecialchars($doc['fichier']) . '"></iframe>';
+                            echo '<br><a href="uploads/' . htmlspecialchars($doc['fichier']) . '" class="btn" download>📥 Télécharger le fichier</a>';
+                        } else {
+                            echo '<p>Prévisualisation non disponible pour ce type de fichier.</p>';
+                            echo '<a href="uploads/' . htmlspecialchars($doc['fichier']) . '" class="btn" download>📥 Télécharger le fichier</a>';
+                        }
+                        ?>
+                    <?php else: ?>
+                        <p>❌ Fichier introuvable ou non associé.</p>
+                    <?php endif; ?>
+                </div>
             </div>
         <?php endforeach; ?>
     <?php endif; ?>
