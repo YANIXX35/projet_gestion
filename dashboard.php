@@ -12,6 +12,7 @@ $role = $_SESSION['role'];
 $nom_utilisateur = $_SESSION['nom'];
 $avatar_path = 'images/avatar_defaut.png';
 $active_section = isset($_GET['section']) ? $_GET['section'] : 'utilisateurs';
+$message = '';
 
 $stmt = $pdo->prepare("SELECT avatar FROM utilisateurs WHERE id = ?");
 $stmt->execute([$utilisateur_id]);
@@ -43,44 +44,36 @@ if ($role === 'utilisateur') {
             $stmt->execute([$id, $utilisateur_id]);
         }
 
-        if (isset($_POST['ajouter_contenu'])) {
+        if (isset($_POST['ajouter_fichier'])) {
             $dossier_id = intval($_POST['dossier_id'] ?? 0);
-            $type_contenu = $_POST['type_contenu'] ?? 'fichier';
-            $titre = $_POST['titre'] ?? '';
-            $description = $_POST['description'] ?? '';
+            $titre = trim($_POST['titre'] ?? '');
             $departement_id = intval($_POST['departement_id'] ?? 0);
-            $statut = $_POST['statut'] ?? 'en_attente';
 
-            if ($type_contenu === 'fichier') {
-                $fichier_nom = '';
-                if (isset($_FILES["fichier"]) && $_FILES["fichier"]["error"] === UPLOAD_ERR_OK) {
-                    $fichier_nom = basename($_FILES["fichier"]["name"]);
-                    $allowed_types = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png'];
-                    $file_extension = strtolower(pathinfo($fichier_nom, PATHINFO_EXTENSION));
-                    if (in_array($file_extension, $allowed_types)) {
-                        $upload_dir = "uploads/";
-                        if (!file_exists($upload_dir)) {
-                            mkdir($upload_dir, 0777, true);
-                        }
-                        if (move_uploaded_file($_FILES["fichier"]["tmp_name"], $upload_dir . $fichier_nom)) {
-                            // Fichier téléchargé avec succès
-                        } else {
-                            $fichier_nom = '';
-                        }
-                    } else {
-                        $fichier_nom = '';
+            if (isset($_FILES['fichier']) && $_FILES['fichier']['error'] === UPLOAD_ERR_OK) {
+                $fichier_nom = basename($_FILES['fichier']['name']);
+                $allowed_types = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png'];
+                $file_extension = strtolower(pathinfo($fichier_nom, PATHINFO_EXTENSION));
+                if (in_array($file_extension, $allowed_types)) {
+                    $upload_dir = "uploads/";
+                    if (!file_exists($upload_dir)) {
+                        mkdir($upload_dir, 0777, true);
                     }
+                    $unique_fichier_nom = time() . '_' . $fichier_nom;
+                    $destination = $upload_dir . $unique_fichier_nom;
+                    if (move_uploaded_file($_FILES['fichier']['tmp_name'], $destination)) {
+                        $stmt = $pdo->prepare("INSERT INTO documents (titre, fichier, departement_id, utilisateur_id, dossier_id, date_creation, statut) VALUES (?, ?, ?, ?, ?, NOW(), 'en_attente')");
+                        $stmt->execute([$titre, $unique_fichier_nom, $departement_id, $utilisateur_id, $dossier_id]);
+                        $message = "✅ Fichier ajouté avec succès !";
+                    } else {
+                        $message = "❌ Erreur lors du téléchargement du fichier.";
+                    }
+                } else {
+                    $message = "❌ Type de fichier non autorisé. Utilisez : " . implode(', ', $allowed_types);
                 }
-                if ($titre && $departement_id && $fichier_nom) {
-                    $stmt = $pdo->prepare("INSERT INTO documents (titre, description, fichier, departement_id, utilisateur_id, dossier_id, date_creation, statut) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)");
-                    $stmt->execute([$titre, $description, $fichier_nom, $departement_id, $utilisateur_id, $dossier_id, $statut]);
-                }
-            } elseif ($type_contenu === 'texte') {
-                $contenu_texte = $_POST['contenu_texte'] ?? '';
-                if ($titre && $departement_id && $contenu_texte) {
-                    $stmt = $pdo->prepare("INSERT INTO documents (titre, description, contenu_texte, departement_id, utilisateur_id, dossier_id, date_creation, statut) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)");
-                    $stmt->execute([$titre, $description, $contenu_texte, $departement_id, $utilisateur_id, $dossier_id, $statut]);
-                }
+            } elseif ($titre && $departement_id) {
+                $message = "❌ Veuillez sélectionner un fichier.";
+            } else {
+                $message = "❌ Veuillez remplir tous les champs.";
             }
         }
     }
@@ -90,6 +83,24 @@ if ($role === 'utilisateur') {
     $dossiers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $departements = $pdo->query("SELECT id, nom FROM departements")->fetchAll(PDO::FETCH_ASSOC);
+
+    // Prepare room-like data with document links
+    $rooms = [];
+    foreach ($dossiers as $dossier) {
+        $docs = $pdo->prepare("SELECT COUNT(*) as total, GROUP_CONCAT(statut) as statuts, MAX(date_creation) as last_modified FROM documents WHERE dossier_id = ? AND utilisateur_id = ?");
+        $docs->execute([$dossier['id'], $utilisateur_id]);
+        $doc_info = $docs->fetch();
+        $tags = $doc_info['statuts'] ? array_unique(array_filter(explode(',', $doc_info['statuts']))) : ['aucun'];
+        $rooms[] = [
+            'id' => $dossier['id'],
+            'title' => $dossier['nom'],
+            'tags' => $tags,
+            'icon' => '📁',
+            'color' => sprintf('#%06X', mt_rand(0, 0xFFFFFF)),
+            'total_docs' => $doc_info['total'],
+            'last_modified' => $doc_info['last_modified'] ?: 'N/A'
+        ];
+    }
 }
 
 if ($role === 'admin') {
@@ -186,6 +197,11 @@ if ($role === 'admin') {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
             transition: background-color 0.3s, color 0.3s;
         }
         body.dark-mode {
@@ -211,30 +227,129 @@ if ($role === 'admin') {
         body.dark-mode tr:hover {
             background: #4a5568;
         }
+        body.dark-mode .room-list .room {
+            background: #2d3748;
+            border-color: #4a5568;
+        }
+        body.dark-mode .details-panel {
+            background: #2d3748;
+            border-color: #4a5568;
+        }
+        body.dark-mode .tag {
+            background: #4a5568;
+        }
+        body.dark-mode .drop-zone {
+            background: #2d3748;
+            border-color: #4a5568;
+        }
+        body.dark-mode .drop-zone.dragover {
+            background: #4a5568;
+        }
+        body.dark-mode .file-item {
+            background: #2d3748;
+            border-color: #4a5568;
+        }
         .sidebar {
-            width: 250px;
-            background: #2c3e50;
-            color: white;
+            width: 220px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #ddd;
+            color: #333;
             height: 100vh;
             position: fixed;
             top: 0;
             left: 0;
-            padding-top: 20px;
             transition: all 0.3s;
         }
-        .sidebar a {
-            color: white;
-            padding: 15px 20px;
-            display: block;
-            text-decoration: none;
-            transition: background 0.3s;
+        .sidebar h2 {
+            font-size: 18px;
         }
-        .sidebar a:hover, .sidebar a.active {
-            background: #34495e;
+        .sidebar a, .sidebar button {
+            display: block;
+            width: 100%;
+            margin: 15px 0;
+            padding: 10px;
+            background: #2979ff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            text-align: left;
+            text-decoration: none;
+        }
+        .sidebar a:hover, .sidebar button:hover {
+            background: #1a60d8;
+        }
+        .sidebar a.active {
+            background: #1a60d8;
+        }
+        .menu-item {
+            margin: 15px 0;
+            color: #333;
+            cursor: pointer;
         }
         .content {
-            margin-left: 250px;
+            margin-left: 220px;
             padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+        }
+        .room-list {
+            flex: 2;
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .room {
+            width: 180px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            position: relative;
+            cursor: pointer;
+            transition: box-shadow 0.3s;
+        }
+        .room:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .room .icon {
+            font-size: 30px;
+        }
+        .room .title {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .tags {
+            margin-top: 10px;
+        }
+        .tag {
+            display: inline-block;
+            background: #eee;
+            border-radius: 12px;
+            padding: 3px 8px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        .details-panel {
+            flex: 1;
+            padding: 20px;
+            border-left: 1px solid #ddd;
+            background: #fafafa;
+        }
+        .details-panel h3 {
+            margin-top: 0;
+        }
+        .property {
+            margin-bottom: 10px;
+        }
+        .property span {
+            font-weight: bold;
         }
         .card {
             background: white;
@@ -288,18 +403,17 @@ if ($role === 'admin') {
         body.dark-mode .dropdown-menu {
             background: #2d3748;
         }
-        .dropdown-menu a {
+        .dropdown-menu a, .dropdown-menu button {
             display: block;
             padding: 10px;
             color: #2c3e50;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
         }
-        body.dark-mode .dropdown-menu a {
+        body.dark-mode .dropdown-menu a, body.dark-mode .dropdown-menu button {
             color: #e2e8f0;
-        }
-        .filter-container {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
         }
         .avatar {
             width: 64px;
@@ -309,32 +423,41 @@ if ($role === 'admin') {
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             cursor: pointer;
         }
-        .dossier-carte {
-            position: relative;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            overflow: hidden;
-            transition: box-shadow 0.3s;
-        }
-        .dossier-carte:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .dossier-actions {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            gap: 5px;
-        }
-        .dossier-img {
-            width: 100%;
-            height: 100px;
-            object-fit: cover;
-        }
-        .dossier-nom {
-            padding: 10px;
+        .drop-zone {
+            border: 2px dashed #ccc;
+            padding: 20px;
             text-align: center;
-            font-weight: bold;
+            background: #f9f9f9;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .drop-zone.dragover {
+            background: #e0e0e0;
+            border-color: #3498db;
+        }
+        .file-preview {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .file-item {
+            border: 1px solid #ddd;
+            padding: 5px;
+            border-radius: 4px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+        }
+        body.dark-mode .file-item {
+            background: #2d3748;
+            border-color: #4a5568;
+        }
+        .file-item img {
+            max-width: 40px;
+            max-height: 40px;
+            margin-right: 5px;
         }
     </style>
 </head>
@@ -342,22 +465,34 @@ if ($role === 'admin') {
     <div class="flex">
         <!-- Sidebar -->
         <div class="sidebar">
-            <h2 class="text-xl font-bold p-4">Menu Admin</h2>
-            <a href="?section=utilisateurs" class="<?= $active_section === 'utilisateurs' ? 'active' : '' ?>">
-                <span class="mr-2">👥</span> Utilisateurs
-            </a>
-            <a href="?section=documents" class="<?= $active_section === 'documents' ? 'active' : '' ?>">
-                <span class="mr-2">📚</span> Documents
-            </a>
-            <a href="?section=stats" class="<?= $active_section === 'stats' ? 'active' : '' ?>">
-                <span class="mr-2">📊</span> Statistiques
-            </a>
+            <h2 class="text-xl font-bold">Menu</h2>
+            <?php if ($role === 'admin'): ?>
+                <a href="?section=utilisateurs" class="<?= $active_section === 'utilisateurs' ? 'active' : '' ?>">
+                    <span class="mr-2">👥</span> Utilisateurs
+                </a>
+                <a href="?section=documents" class="<?= $active_section === 'documents' ? 'active' : '' ?>">
+                    <span class="mr-2">📚</span> Documents
+                </a>
+                <a href="?section=stats" class="<?= $active_section === 'stats' ? 'active' : '' ?>">
+                    <span class="mr-2">📊</span> Statistiques
+                </a>
+            <?php else: ?>
+                <button onclick="document.getElementById('new-room-form').style.display='block'">Nouveau dossier</button>
+                <a href="documents_dossier.php" class="menu-item">📄 Mes documents</a>
+                <div class="menu-item">🗃️ Archive</div>
+                <div class="menu-item">⚙️ Paramètres</div>
+                <div class="menu-item">🗑️ Corbeille</div>
+            <?php endif; ?>
             <a href="profil.php">
                 <span class="mr-2">👤</span> Profil
             </a>
-            <a href="logout.php" class="mt-4 block p-2 bg-red-600 hover:bg-red-700 rounded">
+            <a href="logout.php" class="bg-red-600 hover:bg-red-700">
                 <span class="mr-2">🚪</span> Déconnexion
             </a>
+            <div style="font-size: 13px; background: #e3f2fd; padding: 10px; border-radius: 5px; margin-top: 20px;">
+                Utilisez notre plateforme comme un pro<br>
+                <a href="#">En savoir plus</a>
+            </div>
         </div>
 
         <!-- Content -->
@@ -367,7 +502,7 @@ if ($role === 'admin') {
                     <h2 class="text-2xl font-bold">Bienvenue <?= htmlspecialchars($nom_utilisateur) ?> (<?= htmlspecialchars($role) ?>)</h2>
                     <div class="flex items-center gap-4">
                         <button id="theme-toggle" class="text-white hover:text-gray-300">
-                            <span id="theme-icon">🌞</span>
+                            <span id="theme-icon"><?= isset($_COOKIE['theme']) && $_COOKIE['theme'] === 'dark' ? '🌜' : '🌞' ?></span>
                         </button>
                         <div class="dropdown relative">
                             <img src="<?= htmlspecialchars($avatar_path) ?>" alt="avatar" class="avatar">
@@ -419,7 +554,7 @@ if ($role === 'admin') {
                 <!-- Section Documents -->
                 <div class="card" id="documents" <?= $active_section === 'documents' ? '' : 'style="display:none;"' ?>>
                     <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Tous les documents</h3>
-                    <form method="POST" class="filter-container">
+                    <form method="POST" class="flex gap-2 mb-4">
                         <select name="type_filtre" class="border rounded p-2">
                             <option value="">Type</option>
                             <option value="fichier">Fichier</option>
@@ -477,83 +612,78 @@ if ($role === 'admin') {
                     </div>
                 </div>
             <?php else: ?>
-                <div class="container">
-                    <form method="POST" style="margin: 20px 0; display: flex; gap: 10px;">
-                        <input type="text" name="nom" placeholder="Nom du dossier" required class="border rounded p-2" />
-                        <button type="submit" name="nouveau_dossier" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">📁 Créer</button>
-                    </form>
-
-                    <div class="galerie" id="galerie" style="display: flex; flex-direction: column; gap: 20px;">
-                        <?php foreach ($dossiers as $dossier): ?>
-                            <?php
-                            $docs = $pdo->prepare("SELECT * FROM documents WHERE dossier_id = ? AND utilisateur_id = ? LIMIT 1");
-                            $docs->execute([$dossier['id'], $utilisateur_id]);
-                            $doc = $docs->fetch();
-                            $vignette = "images/folder.png";
-                            if ($doc && $doc['fichier'] && file_exists("uploads/" . $doc['fichier']) && in_array(strtolower(pathinfo($doc['fichier'], PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png'])) {
-                                $vignette = "uploads/" . $doc['fichier'];
-                            }
-                            ?>
-                            <div class="dossier-carte" draggable="true" data-id="<?= $dossier['id'] ?>">
-                                <div class="dossier-actions flex justify-end gap-2 p-2">
-                                    <div class="dropdown relative inline-block">
-                                        <button class="action-btn text-blue-500 hover:text-blue-700">⚙️</button>
-                                        <div class="dropdown-menu">
-                                            <form method="POST" style="display:flex; flex-direction: column;">
-                                                <input type="hidden" name="dossier_id" value="<?= $dossier['id'] ?>" />
-                                                <input type="text" name="nouveau_nom" placeholder="Renommer" class="border rounded p-2 mb-2" />
-                                                <button type="submit" name="renommer_dossier" class="p-2 hover:bg-gray-200">Renommer</button>
-                                                <button type="submit" name="supprimer_dossier" class="p-2 hover:bg-red-100 text-red-600" onclick="return confirm('Supprimer ce dossier ?')">Supprimer</button>
-                                            </form>
-                                        </div>
+                <div class="main">
+                    <!-- Room list -->
+                    <div class="room-list">
+                        <form id="new-room-form" method="POST" style="display:none; margin-bottom: 20px; width: 100%;">
+                            <input type="text" name="nom" placeholder="Nom du dossier" required class="border rounded p-2 mr-2" />
+                            <button type="submit" name="nouveau_dossier" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Créer</button>
+                            <button type="button" onclick="this.parentElement.style.display='none'" class="bg-gray-500 text-white p-2 rounded hover:bg-gray-600">Annuler</button>
+                        </form>
+                        <?php
+                        $stmt = $pdo->prepare("SELECT d.id, d.titre, d.fichier, dos.nom AS nom_dossier FROM documents d LEFT JOIN dossiers dos ON d.dossier_id = dos.id WHERE d.utilisateur_id = ?");
+                        $stmt->execute([$utilisateur_id]);
+                        $user_documents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($rooms as $room): ?>
+                            <div class="room" style="border-color: <?= htmlspecialchars($room['color']) ?>">
+                                <div class="dropdown relative inline-block" style="position: absolute; top: 10px; right: 10px;">
+                                    <button class="action-btn text-blue-500 hover:text-blue-700">⚙️</button>
+                                    <div class="dropdown-menu">
+                                        <form method="POST" style="display:flex; flex-direction: column;">
+                                            <input type="hidden" name="dossier_id" value="<?= $room['id'] ?>" />
+                                            <input type="text" name="nouveau_nom" placeholder="Renommer" class="border rounded p-2 mb-2" />
+                                            <button type="submit" name="renommer_dossier" class="p-2 hover:bg-gray-200">Renommer</button>
+                                            <button type="submit" name="supprimer_dossier" class="p-2 hover:bg-red-100 text-red-600" onclick="return confirm('Supprimer ce dossier ?')">Supprimer</button>
+                                        </form>
                                     </div>
                                 </div>
-                                <a href="documents_dossier.php?id=<?= $dossier['id'] ?>" style="text-decoration:none; color:inherit;">
-                                    <img src="<?= htmlspecialchars($vignette) ?>" class="dossier-img" alt="vignette" />
-                                    <div class="dossier-nom">📁 <?= htmlspecialchars($dossier['nom']) ?></div>
-                                </a>
-                                <form method="POST" enctype="multipart/form-data" class="doc-form mt-2">
-                                    <input type="hidden" name="dossier_id" value="<?= $dossier['id'] ?>" />
-                                    <select name="type_contenu" required class="border rounded p-2 mb-2 w-full">
-                                        <option value="fichier">Fichier</option>
-                                        <option value="texte">Texte</option>
-                                    </select>
-                                    <input type="text" name="titre" placeholder="Titre" required class="border rounded p-2 mb-2 w-full" />
-                                    <textarea name="description" placeholder="Description" class="border rounded p-2 mb-2 w-full"></textarea>
-                                    <select name="departement_id" required class="border rounded p-2 mb-2 w-full">
-                                        <option value="">-- Département --</option>
-                                        <?php foreach ($departements as $dep): ?>
-                                            <option value="<?= $dep['id'] ?>"><?= htmlspecialchars($dep['nom']) ?></option>
+                                <a href="documents_dossier.php?id=<?= $room['id'] ?>" style="text-decoration:none; color:inherit;">
+                                    <div class="icon"><?= $room['icon'] ?></div>
+                                    <div class="title"><?= htmlspecialchars($room['title']) ?></div>
+                                    <div class="tags">
+                                        <?php foreach ($room['tags'] as $tag): ?>
+                                            <span class="tag"><?= htmlspecialchars($tag) ?></span>
                                         <?php endforeach; ?>
-                                    </select>
-                                    <select name="statut" required class="border rounded p-2 mb-2 w-full">
-                                        <option value="en_attente">En attente</option>
-                                        <option value="valide">Validé</option>
-                                        <option value="archive">Archivé</option>
-                                    </select>
-                                    <div id="fichier_fields_<?= $dossier['id'] ?>" style="display: block;">
-                                        <input type="file" name="fichier" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png" class="border rounded p-2 mb-2 w-full" />
                                     </div>
-                                    <div id="texte_fields_<?= $dossier['id'] ?>" style="display: none;">
-                                        <textarea name="contenu_texte" placeholder="Contenu du texte" rows="4" class="border rounded p-2 mb-2 w-full"></textarea>
-                                    </div>
-                                    <button type="submit" name="ajouter_contenu" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 w-full">📥 Ajouter</button>
-                                </form>
-                                <script>
-                                    document.querySelector('select[name="type_contenu"]').addEventListener('change', function() {
-                                        const fichierFields = document.getElementById('fichier_fields_<?= $dossier['id'] ?>');
-                                        const texteFields = document.getElementById('texte_fields_<?= $dossier['id'] ?>');
-                                        if (this.value === 'fichier') {
-                                            fichierFields.style.display = 'block';
-                                            texteFields.style.display = 'none';
-                                        } else {
-                                            fichierFields.style.display = 'none';
-                                            texteFields.style.display = 'block';
-                                        }
-                                    });
-                                </script>
+                                    <?php foreach ($user_documents as $doc): ?>
+                                        <?php if ($doc['nom_dossier'] === $room['title'] && $doc['fichier']): ?>
+                                            <a href="uploads/<?= htmlspecialchars($doc['fichier']) ?>" target="_blank" class="block mt-2 text-blue-500 hover:underline">
+                                                <?= htmlspecialchars($doc['titre'] ?: $doc['fichier']) ?>
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </a>
                             </div>
                         <?php endforeach; ?>
+                    </div>
+
+                    <!-- Details panel -->
+                    <div class="details-panel">
+                        <h3>Ajouter un fichier</h3>
+                        <?php if ($message): ?>
+                            <div class="text-green-500 mb-4" id="message"><?= htmlspecialchars($message) ?></div>
+                        <?php endif; ?>
+                        <form method="post" action="" enctype="multipart/form-data" class="space-y-4">
+                            <div class="drop-zone" id="dropZone">
+                                <p>Glissez et déposez un fichier ici ou <span class="text-blue-500 cursor-pointer">parcourez</span></p>
+                                <input type="file" id="fileInput" name="fichier" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png" class="hidden" required>
+                                <div class="file-preview" id="filePreview"></div>
+                            </div>
+                            <input type="text" name="titre" placeholder="Nom du fichier" required class="w-full p-2 border rounded">
+                            <select name="dossier_id" required class="w-full p-2 border rounded">
+                                <option value="">-- Sélectionner un dossier --</option>
+                                <?php foreach ($dossiers as $dossier): ?>
+                                    <option value="<?= $dossier['id'] ?>"><?= htmlspecialchars($dossier['nom']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <select name="departement_id" required class="w-full p-2 border rounded">
+                                <option value="">-- Sélectionner un département --</option>
+                                <?php foreach ($departements as $dep): ?>
+                                    <option value="<?= $dep['id'] ?>"><?= htmlspecialchars($dep['nom']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="submit" name="ajouter_fichier" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Ajouter</button>
+                        </form>
                     </div>
                 </div>
             <?php endif; ?>
@@ -571,7 +701,8 @@ if ($role === 'admin') {
             document.cookie = `theme=${isDark ? 'dark' : 'light'}; path=/; max-age=31536000`;
         });
 
-        // Chart.js
+        // Chart.js for admin
+        <?php if ($role === 'admin'): ?>
         const ctx = document.getElementById('myChart').getContext('2d');
         const myChart = new Chart(ctx, {
             type: 'bar',
@@ -593,6 +724,60 @@ if ($role === 'admin') {
                 }
             }
         });
+        <?php endif; ?>
+
+        // Drag and Drop functionality
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const filePreview = document.getElementById('filePreview');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            updatePreview();
+        });
+        fileInput.addEventListener('change', updatePreview);
+
+        function updatePreview() {
+            filePreview.innerHTML = '';
+            if (fileInput.files.length > 0) {
+                for (const file of fileInput.files) {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    const icon = getFileIcon(file.name);
+                    fileItem.innerHTML = `${icon} ${file.name}`;
+                    filePreview.appendChild(fileItem);
+                }
+            }
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            switch (ext) {
+                case 'pdf': return '<img src="https://img.icons8.com/color/48/000000/pdf.png" alt="PDF">';
+                case 'doc':
+                case 'docx': return '<img src="https://img.icons8.com/color/48/000000/microsoft-word.png" alt="Word">';
+                case 'ppt':
+                case 'pptx': return '<img src="https://img.icons8.com/color/48/000000/microsoft-powerpoint.png" alt="PowerPoint">';
+                case 'jpg':
+                case 'jpeg':
+                case 'png': return '<img src="https://img.icons8.com/color/48/000000/image.png" alt="Image">';
+                default: return '<span>📄</span>';
+            }
+        }
+
+        // Auto-clear message after 3 seconds
+        const messageDiv = document.getElementById('message');
+        if (messageDiv) {
+            setTimeout(() => messageDiv.style.display = 'none', 3000);
+        }
     </script>
 </body>
 </html>

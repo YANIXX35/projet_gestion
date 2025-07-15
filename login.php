@@ -2,6 +2,13 @@
 session_start();
 include 'config.php';
 
+// PHPMailer
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+require 'PHPMailer/PHPMailer.php';
+require 'PHPMailer/SMTP.php';
+require 'PHPMailer/Exception.php';
+
 $identifiant = $_POST['identifiant'] ?? '';
 $mot_de_passe = $_POST['mot_de_passe'] ?? '';
 $role = $_POST['role'] ?? '';
@@ -14,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($mot_de_passe, $user['mot_de_passe'])) {
+            // ✅ Connexion OK
             $_SESSION['utilisateur_id'] = $user['id'];
             $_SESSION['nom'] = $user['nom'];
             $_SESSION['role'] = $user['role'];
@@ -21,10 +29,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             header("Location: dashboard.php");
             exit;
+
         } else {
-            $erreur = "❌ Identifiants ou mot de passe incorrects.";
-            if ($user && !empty($user['avatar'])) {
-                $avatarPath = $user['avatar'];
+            // ❌ Mot de passe incorrect, mais utilisateur connu => alerte email
+            if ($user) {
+                try {
+                    $mail = new PHPMailer(true);
+                    $mail->isSMTP();
+                    $mail->Host = 'smtp.gmail.com';
+                    $mail->SMTPAuth = true;
+                    $mail->Username = 'binksyao95@gmail.com';         // Ton email
+                    $mail->Password = 'phkhvhvljtdvroaj';             // Mot de passe d'application
+                    $mail->SMTPSecure = 'tls';
+                    $mail->Port = 587;
+
+                    $mail->setFrom('binksyao95@gmail.com', 'Sécurité - YANISSE');
+                    $mail->addAddress($user['email'], $user['nom']);
+                    $mail->isHTML(true);
+                    $mail->Subject = '🔒 Tentative de connexion suspecte !';
+                    $mail->Body = "
+                        <p>Bonjour <b>" . htmlspecialchars($user['nom']) . "</b>,</p>
+                        <p>Quelqu'un a tenté de se connecter à votre compte avec votre identifiant <b>" . htmlspecialchars($identifiant) . "</b> mais a échoué à cause d’un mot de passe incorrect.</p>
+                        <p><b>Date :</b> " . date("d/m/Y H:i:s") . "<br>
+                        <b>IP :</b> " . $_SERVER['REMOTE_ADDR'] . "</p>
+                        <p>Si c’était vous, vous pouvez ignorer ce message.<br>
+                        Sinon, veuillez <a href='http://localhost/formation/change_password.php'>changer votre mot de passe</a> immédiatement.</p>
+                    ";
+
+                    $mail->send();
+                } catch (Exception $e) {
+                    error_log("Erreur email alerte : " . $mail->ErrorInfo);
+                }
+
+                $erreur = "❌ Identifiants ou mot de passe incorrects.";
+                if (!empty($user['avatar'])) {
+                    $avatarPath = $user['avatar'];
+                }
+            } else {
+                $erreur = "❌ Identifiants ou mot de passe incorrects.";
             }
         }
     } else {
